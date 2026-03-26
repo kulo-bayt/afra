@@ -11,7 +11,8 @@ const COLORS = {
   pipe: 0x27ae60, pipeDark: 0x1e8449,
   brick: 0xd35400, brickDark: 0xa04000,
   qBlock: 0xf1c40f, qBlockDark: 0xd4ac0f,
-  coinColor: 0xFFD700, shield: 0x48dbfb, speed: 0x55efc4, magnet: 0xa29bfe
+  coinColor: 0xFFD700, shield: 0x48dbfb, speed: 0x55efc4, magnet: 0xa29bfe,
+  spring: 0xff6b9d, springDark: 0xc44569
 };
 const GAME_W = 800, GAME_H = 500, T = 40; // tile size
 
@@ -36,15 +37,18 @@ const LEVELS = {
     coins: [
       [80,420],[120,420],[160,420],[200,420],
       [500,340],[520,340],[540,340],
+      [650,280],[650,240],[650,200],  // coin column above spring!
       [710,320],[730,320],[750,320],
       [960,340],[980,340],[1000,340],
       [1160,320],[1180,320],[1200,320],
+      [1250,280],[1250,240],[1250,200],  // coin column above spring!
       [1380,300],[1400,300],[1420,300],
     ],
     powerUps: [],
     enemies: [[600,40,false],[1050,45,false]],
     movingPlats: [],
-    crush: [1520, 290]  // platform at y=340, reachable from ground
+    springs: [[650,448],[1250,448]],  // trampolines on ground
+    crush: [1520, 290]
   },
   // Level 2 - "Yükselen Kalpler" (Orta): 3 boşluk, 4 düşman, 1 hareketli platform
   2: {
@@ -67,11 +71,14 @@ const LEVELS = {
     coins: [
       [80,420],[120,420],[160,420],
       [420,380],[440,360],[460,340],
+      [560,280],[560,240],[560,200],  // above spring
       [620,420],[660,420],
       [790,320],[830,320],
       [1000,420],[1040,420],
+      [1200,280],[1200,240],[1200,200],  // above spring
       [1200,340],[1240,340],[1280,340],
       [1550,300],[1570,300],
+      [1810,320],[1850,280],[1850,240],[1850,200],  // above spring
       [1810,320],[1850,320],
       [1980,420],[2020,420],[2060,420],
       [2260,310],[2300,310],[2340,310]
@@ -79,7 +86,8 @@ const LEVELS = {
     powerUps: [[1400,380,'speed']],
     enemies: [[480,50,false],[900,55,false],[1350,60,false],[1900,55,false]],
     movingPlats: [[540,340,100,120,0,2200]],
-    crush: [2320, 290]  // platform at y=340
+    springs: [[560,448],[1200,448],[1850,448]],
+    crush: [2320, 290]
   },
   // Level 3 - "Son Dans" (Zor): 4 geniş boşluk, 5 düşman + 1 boss, 2 hareketli platform
   3: {
@@ -122,7 +130,8 @@ const LEVELS = {
     powerUps: [[1640,330,'speed'],[2630,320,'shield']],
     enemies: [[340,60,false],[700,65,false],[1300,70,false],[1800,65,false],[2400,70,false],[3060,80,true]],
     movingPlats: [[440,350,90,100,0,2000],[1780,350,90,100,0,2200]],
-    crush: [3140, 270]  // platform at y=320
+    springs: [[480,448],[1100,448],[1900,448],[2500,448]],
+    crush: [3140, 270]
   }
 };
 
@@ -211,9 +220,9 @@ class StoryScene extends Phaser.Scene {
     const lv=data.level||1, W=this.scale.width, H=this.scale.height;
     const bg=this.add.graphics();bg.fillStyle(COLORS.darkBg,1);bg.fillRect(0,0,W,H);bg.lineStyle(4,COLORS.pink,0.6);bg.strokeRoundedRect(30,30,W-60,H-60,20);
     const stories={
-      1:"Afra bir sabah uyandığında, bugünün\nözel bir gün olduğunu hissetti...\nAma önce küçük yaramaz engelleri\naşması gerekiyordu!",
-      2:"Afra giderek yaklaşıyordu...\nKalbi hızla atıyordu.\nAma yol daha da zorlaşıyordu!",
-      3:"Son adım...\nEn büyük engeli aşarsa,\nonu bekleyen sürpriz\nçok güzel olacak!"
+      1:"Afra bir sabah uyandığında, bugünün\nçok özel olduğunu hissetti...\nYaramaz bebekler yolunu kesiyor!\nOnları ez ya da atla, hedefe ulaş!",
+      2:"Bebekler daha da yaramaz oldu!\nAma Afra pes etmez...\nTramboline bas, yükseğe uç,\nve kalbine kavuş!",
+      3:"Son dans başlıyor...\nEn büyük bebek onu bekliyor!\nAma aşk her engeli yener...\nHadi Afra, göster gücünü!"
     };
     const names={1:'İlk Adım',2:'Yükselen Kalpler',3:'Son Dans'};
     this.add.text(W/2,70,'Level '+lv,{fontFamily:'Fredoka One, cursive',fontSize:'32px',color:'#FFD93D',stroke:'#C44569',strokeThickness:4}).setOrigin(0.5);
@@ -286,6 +295,7 @@ class GameScene extends Phaser.Scene {
     this.coins = this.physics.add.group({allowGravity:false});
     this.powerUpItems = this.physics.add.group({allowGravity:false});
     this.enemies = this.physics.add.group({allowGravity:false});
+    this.springGroup = this.physics.add.staticGroup();
 
     // Build level
     this.buildGround(lvl, H);
@@ -295,6 +305,7 @@ class GameScene extends Phaser.Scene {
     this.buildQuestionBlocks(lvl);
     this.buildBrickBlocks(lvl);
     this.buildMovingPlatforms(lvl);
+    this.buildSprings(lvl);
     this.spawnCoins(lvl);
     this.spawnPowerUps(lvl);
     this.spawnEnemies(lvl, H);
@@ -322,6 +333,7 @@ class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.questionBlocks, this.hitQBlock, null, this);
     this.physics.add.collider(this.player, this.brickBlocks, this.hitBrick, null, this);
 
+    this.physics.add.collider(this.player, this.springGroup, this.hitSpring, null, this);
     this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
     this.physics.add.overlap(this.player, this.crush, this.reachCrush, null, this);
     this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
@@ -629,6 +641,52 @@ class GameScene extends Phaser.Scene {
     });
   }
 
+  // --- SPRINGS (Trambolinler) ---
+  buildSprings(lvl) {
+    if(!lvl.springs) return;
+    lvl.springs.forEach(([x, y]) => {
+      const g = this.add.graphics(); g.setDepth(2);
+      // Base
+      g.fillStyle(COLORS.springDark, 1);
+      g.fillRoundedRect(x, y+8, 30, 12, {tl:0,tr:0,bl:4,br:4});
+      // Spring coil
+      g.lineStyle(3, COLORS.spring, 1);
+      g.beginPath();
+      for(let i=0; i<4; i++) {
+        g.moveTo(x+6, y+6-i*2); g.lineTo(x+24, y+4-i*2);
+      }
+      g.strokePath();
+      // Top pad
+      g.fillStyle(COLORS.spring, 1);
+      g.fillRoundedRect(x-2, y-4, 34, 8, 4);
+      g.fillStyle(0xffffff, 0.3);
+      g.fillRoundedRect(x+2, y-2, 16, 3, 2);
+
+      const z = this.add.zone(x+15, y+5, 34, 20);
+      this.physics.add.existing(z, true);
+      z.sGfx = g; z.sX = x; z.sY = y;
+      this.springGroup.add(z);
+
+      // Idle bounce animation
+      this.tweens.add({targets:g, scaleY:{from:1,to:0.92}, duration:600, yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
+    });
+  }
+
+  hitSpring(player, spring) {
+    if(!player.body.touching.down) return;
+    // Super bounce!
+    player.setVelocityY(-900);
+    this.jumpHeld = true;
+
+    // Squash-stretch animation
+    const g = spring.sGfx;
+    this.tweens.add({targets:g, scaleY:0.4, scaleX:1.3, duration:80, yoyo:true, ease:'Quad.easeOut'});
+
+    // Boing text
+    this.showFloatingText(spring.x, spring.sY - 20, 'Boing!', '#FF6B9D');
+    this.spawnBurst(spring.x, spring.sY, COLORS.spring, 6);
+  }
+
   // --- COINS ---
   spawnCoins(lvl) {
     lvl.coins.forEach(([x, y]) => this.spawnCoinAt(x, y, false));
@@ -768,6 +826,9 @@ class GameScene extends Phaser.Scene {
 
   // --- ENEMIES ---
   spawnEnemies(lvl, H) {
+    const BABY_LINES = ['Ağlayacağım!','Mama nerede?','Beni ezme!','Çıtır çıtır!','Gıdık gıdık!','Hıyaaa!','Dadaaa!','Goo goo!'];
+    const BOSS_LINES = ['Ben büyük bebeğim!','Geçemezsin!','Burada patron benim!','Haha!'];
+
     lvl.enemies.forEach(([x, spd, boss]) => {
       const e = this.physics.add.sprite(x, H-100, 'baby');
       e.setScale(boss ? 0.18 : 0.13);
@@ -776,13 +837,44 @@ class GameScene extends Phaser.Scene {
       e.setDepth(5); e.isBoss=boss||false; e.patrolSpeed=spd;
       e.setVelocityX(spd);
       this.enemies.add(e);
+
       if(boss) {
-        // Boss: red tint + periodic jump
         e.setTint(0xff6b6b);
         this.time.addEvent({delay:2500,loop:true,callback:()=>{
           if(e.active&&e.body&&e.body.blocked.down) e.setVelocityY(-280);
         }});
       }
+
+      // Funny speech bubbles
+      const lines = boss ? BOSS_LINES : BABY_LINES;
+      this.time.addEvent({
+        delay: Phaser.Math.Between(3000, 6000), loop: true,
+        callback: () => {
+          if(!e.active) return;
+          const dist = this.player && this.player.active ?
+            Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y) : 999;
+          if(dist > 300) return; // only show when player is near
+
+          const bubble = this.add.graphics(); bubble.setDepth(20);
+          bubble.fillStyle(0xffffff, 0.9);
+          bubble.fillRoundedRect(-45, -22, 90, 28, 8);
+          // Speech tail
+          bubble.fillTriangle(-5, 6, 5, 6, 0, 14);
+          bubble.setPosition(e.x, e.y - 55);
+
+          const txt = this.add.text(e.x, e.y - 60, Phaser.Math.RND.pick(lines), {
+            fontFamily:'Fredoka One, cursive', fontSize:'10px', color:'#C44569', align:'center'
+          }).setOrigin(0.5).setDepth(21);
+
+          // Pop in, stay, fade out
+          bubble.setScale(0); txt.setScale(0);
+          this.tweens.add({targets:[bubble,txt], scaleX:1, scaleY:1, duration:200, ease:'Back.easeOut'});
+          this.time.delayedCall(1500, () => {
+            this.tweens.add({targets:[bubble,txt], alpha:0, y:'-=15', duration:400,
+              onComplete:()=>{ bubble.destroy(); txt.destroy(); }});
+          });
+        }
+      });
     });
   }
 
@@ -818,15 +910,19 @@ class GameScene extends Phaser.Scene {
 
     // Star power = destroy enemy
     if(this.powerUps.invincible > 0) {
-      this.spawnBurst(enemy.x, enemy.y, COLORS.gold, 10);
-      this.showFloatingText(enemy.x, enemy.y-20, '+300', '#FFD93D');
-      this.score += 300;
-      enemy.destroy();
-      this.updateHUD();
+      this.squashEnemy(enemy, 300);
       return;
     }
 
     if(this.invincible) return;
+
+    // STOMP: player falling onto enemy from above = kill enemy (Mario-style)
+    if(player.body.velocity.y > 0 && player.y < enemy.y - 10) {
+      player.setVelocityY(-400); // bounce off enemy
+      const msgs = ['Ezildim!','Ayyy!','Anne!','Acıdı!','Hıh!'];
+      this.squashEnemy(enemy, 200, Phaser.Math.RND.pick(msgs));
+      return;
+    }
 
     // Shield absorbs hit
     if(this.powerUps.shield) {
@@ -856,6 +952,18 @@ class GameScene extends Phaser.Scene {
       onComplete:()=>{if(this.player&&this.player.active)this.player.setAlpha(1);this.invincible=false;}});
     const dir = player.x < enemy.x ? -1 : 1;
     player.setVelocity(dir*200, -220);
+  }
+
+  squashEnemy(enemy, points, msg) {
+    this.spawnBurst(enemy.x, enemy.y, COLORS.gold, 8);
+    this.showFloatingText(enemy.x, enemy.y-20, msg || '+'+points, msg ? '#FF6B9D' : '#FFD93D');
+    if(msg) this.showFloatingText(enemy.x, enemy.y-40, '+'+points, '#FFD93D');
+    this.score += points;
+    // Squash animation then destroy
+    if(enemy.body) enemy.body.setVelocity(0,0);
+    this.tweens.add({targets:enemy, scaleY:0.1, scaleX:0.2, alpha:0, duration:300,
+      onComplete:()=>{ if(enemy.active) enemy.destroy(); }});
+    this.updateHUD();
   }
 
   // --- REACH CRUSH ---

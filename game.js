@@ -54,15 +54,17 @@ const LEVELS = {
   // ── Level 2 ── küçük boşluklar, biraz daha macera
   2: {
     world: 2400,
-    ground: [[0,500],[580,420],[1080,400],[1560,420],[2000,480]],
+    // Her boşluk 80px – rahat zıplanır
+    ground: [[0,500],[580,500],[1160,400],[1640,400],[2120,280]],
     steps: [],
     floats: [
-      [500,390,100],
-      [800,380,100],
-      [1100,390,100],
+      [550,390,100],
+      [850,380,100],
+      [1100,390,80],    // boşluk 2 yakını
       [1400,370,100],
-      [1700,380,100],
-      [2050,370,100],
+      [1580,390,80],    // boşluk 3 yakını
+      [1850,380,100],
+      [2060,390,80],    // boşluk 4 yakını
       [2250,380,100],
     ],
     qBlocks: [[400,370,'coin'],[1000,350,'shield'],[1800,340,'speed']],
@@ -92,22 +94,25 @@ const LEVELS = {
   // ── Level 3 ── son bölüm, boss bekliyor
   3: {
     world: 3200,
-    ground: [[0,400],[520,340],[1040,320],[1560,360],[2080,320],[2600,360],[2980,300]],
+    // Her boşluk 100px – koşarak atlanır, köprü platformlar var
+    ground: [[0,420],[520,380],[1000,380],[1480,380],[1960,380],[2440,380],[2920,280]],
     steps: [],
     floats: [
-      [430,390,100],
+      [440,390,80],    // boşluk 1 köprü
       [750,380,100],
-      [1100,390,100],
-      [1450,370,100],
-      [1800,380,100],
-      [2150,370,100],
-      [2500,380,100],
-      [2850,370,100],
-      [3050,360,100],
+      [940,390,80],    // boşluk 2 köprü
+      [1250,380,100],
+      [1420,390,80],   // boşluk 3 köprü
+      [1700,380,100],
+      [1900,390,80],   // boşluk 4 köprü
+      [2200,370,100],
+      [2380,390,80],   // boşluk 5 köprü
+      [2700,370,100],
+      [3000,360,100],
     ],
-    qBlocks: [[350,380,'coin'],[1000,360,'heart'],[1700,350,'shield'],[2400,350,'star']],
+    qBlocks: [[350,380,'coin'],[1100,360,'heart'],[1800,360,'shield'],[2500,360,'star']],
     bricks: [],
-    pipes: [[600,50],[1250,50],[1950,50],[2700,50]],
+    pipes: [[650,50],[1350,50],[2050,50],[2800,50]],
     coins: [
       [80,420],[120,420],[160,420],[200,420],
       [450,350],[470,350],[490,350],
@@ -123,7 +128,7 @@ const LEVELS = {
       [3060,320],[3080,320],[3100,320],
     ],
     powerUps: [[1550,360,'speed']],
-    enemies: [[500,65,false],[1150,65,false],[1850,65,false],[2550,65,false],[3080,75,true]],
+    enemies: [[650,60,false],[1200,60,false],[1700,60,false],[2300,60,false],[3050,70,true]],
     movingPlats: [[700,360,100,100,0,2000],[2100,360,100,100,0,2200]],
     springs: [[900,448],[2650,448]],
     signs: [[250,420,'Son düzlük!'],[1600,420,'Aşk engel tanımaz'],[2800,420,'Hadi, koş!']],
@@ -252,7 +257,7 @@ class GameScene extends Phaser.Scene {
 
   init(data) {
     this.currentLevel = data.level || 1;
-    this.hearts = data.hearts || 5;
+    this.hearts = data.hearts || 3;
     this.score = data.score || 0;
     this.coinCount = data.coinCount || 0;
     this.invincible = false;
@@ -332,6 +337,8 @@ class GameScene extends Phaser.Scene {
     this.jumpHeld = false;
     this.coyoteTimer = 0;
     this.wasOnGround = false;
+    this.jumpBufferTimer = 0;  // jump buffer: press jump before landing
+    this.landedThisFrame = false;
 
     // Collisions
     this.physics.add.collider(this.player, this.platforms);
@@ -1186,7 +1193,7 @@ class GameScene extends Phaser.Scene {
     this.add.text(GAME_W/2,GAME_H/2+75,'Tekrar Dene',{fontFamily:'Fredoka One, cursive',fontSize:'22px',color:'#fff'}).setOrigin(0.5).setDepth(26).setScrollFactor(0);
     const z=this.add.zone(GAME_W/2,GAME_H/2+75,180,50).setInteractive({useHandCursor:true}).setDepth(27).setScrollFactor(0);
     z.on('pointerdown',()=>{
-      const startData = {level:this.currentLevel, hearts:5, score:hasCP?this.score:0,
+      const startData = {level:this.currentLevel, hearts:3, score:hasCP?this.score:0,
         coinCount:hasCP?this.coinCount:0, collectedLetters:this.collectedLetters,
         spawnX: hasCP ? this.checkpointX : null};
       this.scene.start('GameScene', startData);
@@ -1327,45 +1334,75 @@ class GameScene extends Phaser.Scene {
       this.shieldGfx.setPosition(this.player.x, this.player.y);
     }
 
-    // Speed multiplier
+    // --- MARIO-STYLE PHYSICS ---
     const speedMult = this.powerUps.speed > 0 ? 1.5 : 1;
-    const moveSpeed = 220 * speedMult;
+    const maxSpeed = 220 * speedMult;
+    const accel = 1200;  // acceleration (px/s²)
+    const decel = 800;   // deceleration / friction
     const jumpPower = this.powerUps.speed > 0 ? -700 : -650;
 
-    // Movement
     const left = this.cursors.left.isDown||this.wasd.left.isDown||this.mobileLeft;
     const right = this.cursors.right.isDown||this.wasd.right.isDown||this.mobileRight;
     const jumpPressed = this.cursors.up.isDown||this.wasd.up.isDown||this.wasd.space.isDown||this.mobileJump;
     const jumpJust = Phaser.Input.Keyboard.JustDown(this.cursors.up)||Phaser.Input.Keyboard.JustDown(this.wasd.up)||Phaser.Input.Keyboard.JustDown(this.wasd.space)||this.mobileJump;
 
-    if(left){this.player.setVelocityX(-moveSpeed);this.player.setFlipX(true);}
-    else if(right){this.player.setVelocityX(moveSpeed);this.player.setFlipX(false);}
-    else{this.player.setVelocityX(0);}
+    // Momentum: accelerate toward max speed, decelerate with friction
+    const dtSec = dt / 1000;
+    let vx = this.player.body.velocity.x;
+    if(left) {
+      vx = Math.max(vx - accel * dtSec, -maxSpeed);
+      this.player.setFlipX(true);
+    } else if(right) {
+      vx = Math.min(vx + accel * dtSec, maxSpeed);
+      this.player.setFlipX(false);
+    } else {
+      // Friction: slide to stop
+      if(Math.abs(vx) < decel * dtSec) vx = 0;
+      else vx -= Math.sign(vx) * decel * dtSec;
+    }
+    this.player.setVelocityX(vx);
 
-    // Coyote time: allow jump shortly after leaving ground
+    // Coyote time
     if(onGround) {
-      this.coyoteTimer = 120; // ms
+      // Landing detection
+      if(!this.wasOnGround) {
+        this.landedThisFrame = true;
+        // Squash on landing
+        this.tweens.add({targets:this.player, scaleY:0.10, scaleX:0.15, duration:60, yoyo:true, ease:'Quad.easeOut'});
+        this.spawnDust(this.player.x, this.player.body.bottom);
+      }
+      this.coyoteTimer = 120;
       this.wasOnGround = true;
     } else {
+      this.landedThisFrame = false;
       this.coyoteTimer -= dt;
+      this.wasOnGround = false;
     }
 
+    // Jump buffer: remember jump press for 100ms
+    if(jumpJust) this.jumpBufferTimer = 100;
+    else this.jumpBufferTimer -= dt;
+
     const canJump = onGround || this.coyoteTimer > 0;
-    if(jumpJust && canJump){
+    const wantsJump = jumpJust || this.jumpBufferTimer > 0;
+    if(wantsJump && canJump){
       this.player.setVelocityY(jumpPower);
-      this.coyoteTimer = 0; // consume coyote time
+      this.coyoteTimer = 0;
+      this.jumpBufferTimer = 0;
+      // Stretch on jump
+      this.tweens.add({targets:this.player, scaleY:0.15, scaleX:0.11, duration:80, yoyo:true, ease:'Quad.easeOut'});
       this.spawnDust(this.player.x, this.player.body.bottom);
       this.jumpHeld = true;
       this.mobileJump = false;
     }
 
-    // Variable jump height: release early = short jump
+    // Variable jump height
     if(!jumpPressed) this.jumpHeld = false;
     if(this.player.body.velocity.y < 0 && !this.jumpHeld) {
-      this.player.body.velocity.y += 30; // cut jump short
+      this.player.body.velocity.y += 30;
     }
 
-    // Fast fall: extra gravity when falling (no floaty feeling)
+    // Fast fall
     if(this.player.body.velocity.y > 0) {
       this.player.body.velocity.y += 15;
     }
@@ -1416,30 +1453,25 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // Crush reactions: as player approaches, crush sends hearts & messages
+    // Crush reactions: only when close, with long cooldown
     if(this.crush && this.crush.active && this.player.active) {
       const distToCrush = this.crush.x - this.player.x;
-      if(distToCrush < 500 && distToCrush > 0) {
-        this.crushReactionTimer -= dt;
-        if(this.crushReactionTimer <= 0) {
-          this.crushReactionTimer = distToCrush < 200 ? 800 : 2000;
-          const msgs = distToCrush < 200
-            ? ['Sonunda!','Gel buraya!','Seni seviyorum!','Hadi hadi!']
-            : ['Buradayım!','Gel!','Seni bekliyorum!','Çabuk ol!'];
-          // Speech bubble from crush
-          const bub = this.add.graphics(); bub.setDepth(20);
-          bub.fillStyle(0xffffff,0.9); bub.fillRoundedRect(-40,-20,80,26,8);
-          bub.fillTriangle(-4,6,4,6,0,13);
-          bub.setPosition(this.crush.x, this.crush.y-50);
-          const ct = this.add.text(this.crush.x, this.crush.y-54, Phaser.Math.RND.pick(msgs), {
-            fontFamily:'Fredoka One, cursive',fontSize:'9px',color:'#C44569',align:'center'
-          }).setOrigin(0.5).setDepth(21);
-          bub.setScale(0); ct.setScale(0);
-          this.tweens.add({targets:[bub,ct],scaleX:1,scaleY:1,duration:200,ease:'Back.easeOut'});
-          this.time.delayedCall(1500,()=>{
-            this.tweens.add({targets:[bub,ct],alpha:0,y:'-=15',duration:400,onComplete:()=>{bub.destroy();ct.destroy();}});
-          });
-        }
+      this.crushReactionTimer -= dt;
+      if(distToCrush < 400 && distToCrush > 0 && this.crushReactionTimer <= 0) {
+        this.crushReactionTimer = 5000;  // 5 saniye arayla, spam yok
+        const msgs = ['Gel!','Buradayım!','Seni bekliyorum!','Hadi!','Çabuk ol!'];
+        const bub = this.add.graphics(); bub.setDepth(20);
+        bub.fillStyle(0xffffff,0.9); bub.fillRoundedRect(-40,-20,80,26,8);
+        bub.fillTriangle(-4,6,4,6,0,13);
+        bub.setPosition(this.crush.x, this.crush.y-50);
+        const ct = this.add.text(this.crush.x, this.crush.y-54, Phaser.Math.RND.pick(msgs), {
+          fontFamily:'Fredoka One, cursive',fontSize:'10px',color:'#C44569',align:'center'
+        }).setOrigin(0.5).setDepth(21);
+        bub.setScale(0); ct.setScale(0);
+        this.tweens.add({targets:[bub,ct],scaleX:1,scaleY:1,duration:200,ease:'Back.easeOut'});
+        this.time.delayedCall(2000,()=>{
+          this.tweens.add({targets:[bub,ct],alpha:0,y:'-=15',duration:400,onComplete:()=>{bub.destroy();ct.destroy();}});
+        });
       }
     }
 

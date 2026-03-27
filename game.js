@@ -53,6 +53,8 @@ const LEVELS = {
     movingPlats: [],
     springs: [[550,448],[1100,448]],
     signs: [[250,400,'Hadi Afra!'],[750,330,'O seni bekliyor...'],[1200,350,'Az kaldı!']],
+    checkpoint: 800,
+    letters: [[350,380,'S'],[700,320,'E'],[1150,320,'V']],
     crush: [1520, 290]
   },
   // Level 2 - "Yükselen Kalpler" (Orta): 3 boşluk, 4 düşman, 1 hareketli platform
@@ -96,6 +98,8 @@ const LEVELS = {
     movingPlats: [[540,340,100,120,0,2200]],
     springs: [[750,448],[1450,448],[2000,448]],
     signs: [[300,400,'Kalbin yolunu bilir'],[800,340,'Pes etme!'],[1500,350,'Sana aşığım diyecek'],[2100,330,'Neredeyse orada!']],
+    checkpoint: 1200,
+    letters: [[500,380,'İ'],[1100,340,'Y'],[1800,340,'O']],
     crush: [2320, 290]
   },
   // Level 3 - "Son Dans" (Zor): 4 geniş boşluk, 5 düşman + 1 boss, 2 hareketli platform
@@ -145,6 +149,8 @@ const LEVELS = {
     movingPlats: [[440,350,90,100,0,2000],[1780,350,90,100,0,2200]],
     springs: [[600,448],[1450,448],[2150,448],[2750,448]],
     signs: [[200,400,'Son düzlük!'],[800,330,'Aşk engel tanımaz'],[1500,340,'Bebeklerden korkma!'],[2200,330,'O seni seviyor'],[2900,350,'Hadi, koş!']],
+    checkpoint: 1600,
+    letters: [[400,380,'R'],[1200,340,'U'],[2400,340,'M']],
     crush: [3140, 270]
   }
 };
@@ -255,7 +261,7 @@ class StoryScene extends Phaser.Scene {
       const bt=this.add.text(W/2,425,'Devam',{fontFamily:'Fredoka One, cursive',fontSize:'22px',color:'#fff'}).setOrigin(0.5);
       const z=this.add.zone(W/2,425,160,50).setInteractive({useHandCursor:true});
       this.tweens.add({targets:[bb,bt,z],scaleX:1.05,scaleY:1.05,duration:600,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
-      z.on('pointerdown',()=>this.scene.start('GameScene',{level:lv, hearts:data.hearts, score:data.score, coinCount:data.coinCount, purchasedItems:data.purchasedItems}));
+      z.on('pointerdown',()=>this.scene.start('GameScene',{level:lv, hearts:data.hearts, score:data.score, coinCount:data.coinCount, purchasedItems:data.purchasedItems, collectedLetters:data.collectedLetters}));
     });
   }
 }
@@ -268,7 +274,7 @@ class GameScene extends Phaser.Scene {
 
   init(data) {
     this.currentLevel = data.level || 1;
-    this.hearts = data.hearts || 3;
+    this.hearts = data.hearts || 5;
     this.score = data.score || 0;
     this.coinCount = data.coinCount || 0;
     this.invincible = false;
@@ -276,6 +282,13 @@ class GameScene extends Phaser.Scene {
     this.levelComplete = false;
     this.powerUps = { invincible:0, speed:0, magnet:0, shield:false };
     this.powerUpGfx = {};
+    this.checkpointReached = false;
+    this.checkpointX = 0;
+    this.stompCombo = 0;
+    this.comboTimer = 0;
+    this.collectedLetters = data.collectedLetters || [];
+    this.crushReactionTimer = 0;
+    this.spawnX = data.spawnX || null;
 
     // Apply purchased items from shop
     const purchased = data.purchasedItems || [];
@@ -310,6 +323,7 @@ class GameScene extends Phaser.Scene {
     this.powerUpItems = this.physics.add.group({allowGravity:false});
     this.enemies = this.physics.add.group({allowGravity:false});
     this.springGroup = this.physics.add.staticGroup();
+    this.letterGroup = this.physics.add.group({allowGravity:false});
 
     // Build level
     this.buildGround(lvl, H);
@@ -321,13 +335,16 @@ class GameScene extends Phaser.Scene {
     this.buildMovingPlatforms(lvl);
     this.buildSprings(lvl);
     this.buildSigns(lvl);
+    this.buildCheckpoint(lvl, H);
+    this.buildLetters(lvl);
     this.spawnCoins(lvl);
     this.spawnPowerUps(lvl);
     this.spawnEnemies(lvl, H);
     this.createCrush(lvl);
 
     // Player
-    this.player = this.physics.add.sprite(60, H-120, 'afra').setScale(0.13);
+    const startX = this.spawnX || 60;
+    this.player = this.physics.add.sprite(startX, H-120, 'afra').setScale(0.13);
     this.player.setCollideWorldBounds(false);
     this.player.body.setSize(200,650);
     this.player.body.setOffset(70,80);
@@ -353,6 +370,7 @@ class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.crush, this.reachCrush, null, this);
     this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
     this.physics.add.overlap(this.player, this.powerUpItems, this.collectPowerUp, null, this);
+    this.physics.add.overlap(this.player, this.letterGroup, this.collectLetter, null, this);
 
     // Camera follow
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -730,6 +748,67 @@ class GameScene extends Phaser.Scene {
     });
   }
 
+  // --- CHECKPOINT ---
+  buildCheckpoint(lvl, H) {
+    if(!lvl.checkpoint) return;
+    const cx = lvl.checkpoint;
+    this.checkpointX = cx;
+    // Flag pole
+    const g = this.add.graphics(); g.setDepth(2);
+    g.fillStyle(0x95a5a6, 1); g.fillRect(cx, H-T-70, 5, 70);
+    // Flag (starts white, turns pink when reached)
+    this.cpFlag = this.add.graphics(); this.cpFlag.setDepth(2);
+    this.cpFlag.fillStyle(0xaaaaaa, 0.6);
+    this.cpFlag.fillTriangle(cx+5, H-T-70, cx+5, H-T-45, cx+30, H-T-57);
+    this.cpFlagX = cx;
+  }
+
+  // --- LOVE LETTERS ---
+  buildLetters(lvl) {
+    if(!lvl.letters) return;
+    lvl.letters.forEach(([x, y, ch]) => {
+      // Already collected?
+      if(this.collectedLetters.includes(ch)) return;
+
+      const g = this.add.graphics(); g.setDepth(4);
+      // Envelope background
+      g.fillStyle(COLORS.pink, 0.3); g.fillCircle(0, 0, 16);
+      g.fillStyle(COLORS.pink, 1); g.fillCircle(0, 0, 12);
+      g.setPosition(x, y);
+
+      const txt = this.add.text(x, y, ch, {
+        fontFamily:'Fredoka One, cursive', fontSize:'14px', color:'#fff',
+        stroke:'#C44569', strokeThickness:2
+      }).setOrigin(0.5).setDepth(5);
+
+      const z = this.add.zone(x, y, 28, 28);
+      this.physics.add.existing(z, false);
+      z.body.setAllowGravity(false);
+      z.lGfx = g; z.lTxt = txt; z.lChar = ch;
+      this.letterGroup.add(z);
+
+      // Float + sparkle
+      this.tweens.add({targets:[g,z,txt], y:y-8, duration:900, yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
+      this.tweens.add({targets:g, alpha:{from:0.7,to:1}, scaleX:{from:0.9,to:1.1}, scaleY:{from:0.9,to:1.1}, duration:600, yoyo:true, repeat:-1});
+    });
+  }
+
+  collectLetter(player, letter) {
+    if(!letter.active) return;
+    const ch = letter.lChar;
+    this.collectedLetters.push(ch);
+    if(letter.lGfx) letter.lGfx.destroy();
+    if(letter.lTxt) letter.lTxt.destroy();
+
+    // Big celebration
+    this.showFloatingText(letter.x, letter.y-20, '💌 ' + ch + '!', '#FF6B9D');
+    this.spawnBurst(letter.x, letter.y, COLORS.pink, 12);
+    this.cameras.main.flash(200, 255, 107, 157, true);
+    this.score += 150;
+    letter.destroy();
+    this.updateHUD();
+  }
+
   // --- COINS ---
   spawnCoins(lvl) {
     lvl.coins.forEach(([x, y]) => this.spawnCoinAt(x, y, false));
@@ -869,8 +948,8 @@ class GameScene extends Phaser.Scene {
 
   // --- ENEMIES ---
   spawnEnemies(lvl, H) {
-    const BABY_LINES = ['Ağlayacağım!','Mama nerede?','Beni ezme!','Çıtır çıtır!','Gıdık gıdık!','Hıyaaa!','Dadaaa!','Goo goo!'];
-    const BOSS_LINES = ['Ben büyük bebeğim!','Geçemezsin!','Burada patron benim!','Haha!'];
+    const BABY_LINES = ['Ağlayacağım!','Mama nerde?','Beni ezme!','Çıtır çıtır!','Gıdık gıdık!','Hıyaaa!','Dadaaa!','Goo goo!','Uykum var!'];
+    const BOSS_LINES = ['Ben KOCA bebeğim!','Kimse geçemez!','Patron benim!','HAHAHA!','Altımı değiştirin!','Biberonumu verin!','Uyumam gerek!'];
 
     lvl.enemies.forEach(([x, spd, boss]) => {
       const e = this.physics.add.sprite(x, H-100, 'baby');
@@ -883,8 +962,11 @@ class GameScene extends Phaser.Scene {
 
       if(boss) {
         e.setTint(0xff6b6b);
-        this.time.addEvent({delay:2000,loop:true,callback:()=>{
-          if(e.active&&e.body&&e.body.blocked.down) e.setVelocityY(-320);
+        e.setScale(0.22); // extra big boss baby!
+        // Wobble animation
+        this.tweens.add({targets:e, angle:{from:-8,to:8}, duration:400, yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
+        this.time.addEvent({delay:2500,loop:true,callback:()=>{
+          if(e.active&&e.body&&e.body.blocked.down) e.setVelocityY(-280);
         }});
       } else {
         // Normal enemies: occasional random jump (Mario-style)
@@ -966,9 +1048,16 @@ class GameScene extends Phaser.Scene {
 
     // STOMP: player falling onto enemy from above = kill enemy (Mario-style)
     if(player.body.velocity.y > 0 && player.y < enemy.y - 10) {
-      player.setVelocityY(-400); // bounce off enemy
+      player.setVelocityY(-400);
+      // Combo system
+      this.stompCombo++;
+      this.comboTimer = 1500;
+      const basePoints = 200;
+      const combo = Math.min(this.stompCombo, 5);
+      const points = basePoints * combo;
       const msgs = ['Ezildim!','Ayyy!','Anne!','Acıdı!','Hıh!'];
-      this.squashEnemy(enemy, 200, Phaser.Math.RND.pick(msgs));
+      this.squashEnemy(enemy, points, Phaser.Math.RND.pick(msgs));
+      if(combo >= 2) this.showFloatingText(player.x, player.y-50, 'x'+combo+' COMBO!', '#FFD93D');
       return;
     }
 
@@ -1034,7 +1123,7 @@ class GameScene extends Phaser.Scene {
       this.add.text(GAME_W/2,GAME_H/2-20,'Level Tamamlandı!',{fontFamily:'Fredoka One, cursive',fontSize:'36px',color:'#FFD93D',stroke:'#C44569',strokeThickness:4}).setOrigin(0.5).setDepth(26).setScrollFactor(0);
       this.time.delayedCall(1500,()=>{
         this.scene.start('ShopScene',{
-          level:this.currentLevel, hearts:this.hearts, score:this.score, coinCount:this.coinCount
+          level:this.currentLevel, hearts:this.hearts, score:this.score, coinCount:this.coinCount, collectedLetters:this.collectedLetters
         });
       });
     } else {
@@ -1080,7 +1169,7 @@ class GameScene extends Phaser.Scene {
 
           // Transition to WinScene after 2.5s
           this.time.delayedCall(2500, ()=>{
-            this.scene.start('WinScene',{score:this.score,coinCount:this.coinCount});
+            this.scene.start('WinScene',{score:this.score,coinCount:this.coinCount,collectedLetters:this.collectedLetters});
           });
         }
       });
@@ -1089,14 +1178,42 @@ class GameScene extends Phaser.Scene {
 
   // --- GAME OVER ---
   showGameOver() {
-    this.gameOver=true; this.physics.pause();
+    this.gameOver=true;
+
+    // Mario-style death animation: bounce up then fall
+    if(this.player && this.player.active) {
+      this.player.body.setAllowGravity(false);
+      this.player.body.setVelocity(0, 0);
+      this.player.setDepth(30);
+      this.tweens.add({
+        targets: this.player, y: this.player.y - 80, duration: 400, ease:'Quad.easeOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: this.player, y: GAME_H + 100, duration: 600, ease:'Quad.easeIn',
+            onComplete: () => this.showGameOverUI()
+          });
+        }
+      });
+    } else {
+      this.showGameOverUI();
+    }
+  }
+
+  showGameOverUI() {
+    this.physics.pause();
+    const hasCP = this.checkpointReached;
     this.add.rectangle(GAME_W/2,GAME_H/2,GAME_W,GAME_H,0x000000,0.6).setDepth(25).setScrollFactor(0);
     this.add.text(GAME_W/2,GAME_H/2-40,'Ahh! Düştün...',{fontFamily:'Fredoka One, cursive',fontSize:'32px',color:'#ff4757',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(26).setScrollFactor(0);
-    this.add.text(GAME_W/2,GAME_H/2+10,'Ama vazgeçme!',{fontFamily:'Fredoka One, cursive',fontSize:'20px',color:'#fff'}).setOrigin(0.5).setDepth(26).setScrollFactor(0);
+    this.add.text(GAME_W/2,GAME_H/2+10, hasCP ? 'Bayraktan devam!' : 'Ama vazgeçme!',{fontFamily:'Fredoka One, cursive',fontSize:'20px',color:'#fff'}).setOrigin(0.5).setDepth(26).setScrollFactor(0);
     const bb=this.add.graphics();bb.fillStyle(COLORS.pink,1);bb.fillRoundedRect(GAME_W/2-90,GAME_H/2+50,180,50,25);bb.setDepth(26).setScrollFactor(0);
     this.add.text(GAME_W/2,GAME_H/2+75,'Tekrar Dene',{fontFamily:'Fredoka One, cursive',fontSize:'22px',color:'#fff'}).setOrigin(0.5).setDepth(26).setScrollFactor(0);
     const z=this.add.zone(GAME_W/2,GAME_H/2+75,180,50).setInteractive({useHandCursor:true}).setDepth(27).setScrollFactor(0);
-    z.on('pointerdown',()=>this.scene.start('GameScene',{level:this.currentLevel,hearts:3,score:0,coinCount:0}));
+    z.on('pointerdown',()=>{
+      const startData = {level:this.currentLevel, hearts:5, score:hasCP?this.score:0,
+        coinCount:hasCP?this.coinCount:0, collectedLetters:this.collectedLetters,
+        spawnX: hasCP ? this.checkpointX : null};
+      this.scene.start('GameScene', startData);
+    });
   }
 
   // --- HUD ---
@@ -1119,12 +1236,22 @@ class GameScene extends Phaser.Scene {
     this.add.text(W/2+40,22,'Lv.'+this.currentLevel,{fontFamily:'Fredoka One, cursive',fontSize:'14px',color:'#fff'}).setOrigin(0,0.5).setDepth(31).setScrollFactor(0);
     // Power-up indicator area
     this.puText=this.add.text(W/2,42,'',{fontFamily:'Fredoka One, cursive',fontSize:'11px',color:'#fff',align:'center'}).setOrigin(0.5,0).setDepth(31).setScrollFactor(0).setAlpha(0);
+    // Letter progress
+    const fullWord = 'SEVİYORUM';
+    const letterStr = fullWord.split('').map(c => this.collectedLetters.includes(c) ? c : '·').join(' ');
+    this.letterText = this.add.text(W/2, 8, letterStr, {
+      fontFamily:'Fredoka One, cursive', fontSize:'10px', color:'#FF6B9D'
+    }).setOrigin(0.5,0).setDepth(31).setScrollFactor(0).setAlpha(0.8);
   }
 
   updateHUD() {
     for(let i=0;i<this.heartIcons.length;i++) this.heartIcons[i].setVisible(i<this.hearts);
     if(this.scoreText) this.scoreText.setText(this.score+'');
     if(this.coinText) this.coinText.setText('x'+this.coinCount);
+    if(this.letterText) {
+      const fullWord = 'SEVİYORUM';
+      this.letterText.setText(fullWord.split('').map(c => this.collectedLetters.includes(c) ? c : '·').join(' '));
+    }
   }
 
   // --- FLOATING TEXT ---
@@ -1292,6 +1419,49 @@ class GameScene extends Phaser.Scene {
       if(mp.mpGfx) mp.mpGfx.setPosition(mp.x, mp.y);
     });
 
+    // Combo timer decay
+    if(this.comboTimer > 0) { this.comboTimer -= dt; if(this.comboTimer <= 0) this.stompCombo = 0; }
+
+    // Checkpoint detection
+    if(!this.checkpointReached && this.checkpointX > 0 && this.player.x >= this.checkpointX) {
+      this.checkpointReached = true;
+      // Animate flag: turn pink
+      if(this.cpFlag) {
+        this.cpFlag.clear();
+        this.cpFlag.fillStyle(COLORS.pink, 1);
+        this.cpFlag.fillTriangle(this.cpFlagX+5, GAME_H-T-70, this.cpFlagX+5, GAME_H-T-45, this.cpFlagX+30, GAME_H-T-57);
+        this.showFloatingText(this.cpFlagX+15, GAME_H-T-85, 'Checkpoint!', '#55efc4');
+        this.spawnBurst(this.cpFlagX+15, GAME_H-T-60, COLORS.mint, 8);
+      }
+    }
+
+    // Crush reactions: as player approaches, crush sends hearts & messages
+    if(this.crush && this.crush.active && this.player.active) {
+      const distToCrush = this.crush.x - this.player.x;
+      if(distToCrush < 500 && distToCrush > 0) {
+        this.crushReactionTimer -= dt;
+        if(this.crushReactionTimer <= 0) {
+          this.crushReactionTimer = distToCrush < 200 ? 800 : 2000;
+          const msgs = distToCrush < 200
+            ? ['Sonunda!','Gel buraya!','Seni seviyorum!','Hadi hadi!']
+            : ['Buradayım!','Gel!','Seni bekliyorum!','Çabuk ol!'];
+          // Speech bubble from crush
+          const bub = this.add.graphics(); bub.setDepth(20);
+          bub.fillStyle(0xffffff,0.9); bub.fillRoundedRect(-40,-20,80,26,8);
+          bub.fillTriangle(-4,6,4,6,0,13);
+          bub.setPosition(this.crush.x, this.crush.y-50);
+          const ct = this.add.text(this.crush.x, this.crush.y-54, Phaser.Math.RND.pick(msgs), {
+            fontFamily:'Fredoka One, cursive',fontSize:'9px',color:'#C44569',align:'center'
+          }).setOrigin(0.5).setDepth(21);
+          bub.setScale(0); ct.setScale(0);
+          this.tweens.add({targets:[bub,ct],scaleX:1,scaleY:1,duration:200,ease:'Back.easeOut'});
+          this.time.delayedCall(1500,()=>{
+            this.tweens.add({targets:[bub,ct],alpha:0,y:'-=15',duration:400,onComplete:()=>{bub.destroy();ct.destroy();}});
+          });
+        }
+      }
+    }
+
     // Fall off screen
     if(this.player.y > GAME_H+50){this.hearts=0;this.showGameOver();}
   }
@@ -1308,6 +1478,7 @@ class ShopScene extends Phaser.Scene {
     this.score = data.score || 0;
     this.coinCount = data.coinCount || 0;
     this.purchasedItems = data.purchasedItems || [];
+    this.collectedLetters = data.collectedLetters || [];
 
     const W = this.scale.width, H = this.scale.height;
 
@@ -1392,7 +1563,8 @@ class ShopScene extends Phaser.Scene {
           this.time.delayedCall(400, () => {
             this.scene.restart({
               level:this.currentLevel, hearts:this.hearts, score:this.score,
-              coinCount:this.coinCount, purchasedItems:this.purchasedItems
+              coinCount:this.coinCount, purchasedItems:this.purchasedItems,
+              collectedLetters:this.collectedLetters
             });
           });
         });
@@ -1412,7 +1584,8 @@ class ShopScene extends Phaser.Scene {
       const nextLevel = this.currentLevel + 1;
       this.scene.start('StoryScene', {
         level: nextLevel, hearts: this.hearts, score: this.score,
-        coinCount: this.coinCount, purchasedItems: this.purchasedItems
+        coinCount: this.coinCount, purchasedItems: this.purchasedItems,
+        collectedLetters: this.collectedLetters
       });
     });
   }
@@ -1425,6 +1598,7 @@ class WinScene extends Phaser.Scene {
   constructor() { super('WinScene'); }
   create(data) {
     const W=this.scale.width, H=this.scale.height, score=data.score||0, coins=data.coinCount||0;
+    const letters = data.collectedLetters || [];
     const bg=this.add.graphics();
     for(let y=0;y<H;y++){bg.fillStyle(Phaser.Display.Color.GetColor(Math.round(Phaser.Math.Linear(0xFF,0xC4)),Math.round(Phaser.Math.Linear(0x6B,0x45)),Math.round(Phaser.Math.Linear(0x9D,0x69))),1);bg.fillRect(0,y,W,1);}
     // Confetti
@@ -1458,7 +1632,14 @@ class WinScene extends Phaser.Scene {
     this.add.text(W/2,320,'Sen bu dünyadaki\nen güzel hediyesin.\nNice mutlu yıllara...',{fontFamily:'Fredoka One, cursive',fontSize:'18px',color:'#fff',align:'center',lineSpacing:6,shadow:{offsetX:1,offsetY:1,color:'#00000033',blur:4,fill:true}}).setOrigin(0.5).setDepth(10);
     // Stats
     if(score>0||coins>0){
-      this.add.text(W/2,395,'Skor: '+score+(coins>0?'  |  Coin: '+coins:''),{fontFamily:'Fredoka One, cursive',fontSize:'15px',color:'#FFD93D'}).setOrigin(0.5).setDepth(10);
+      const statsLine = 'Skor: '+score+(coins>0?'  |  Coin: '+coins:'');
+      this.add.text(W/2,390,statsLine,{fontFamily:'Fredoka One, cursive',fontSize:'15px',color:'#FFD93D'}).setOrigin(0.5).setDepth(10);
+      // Show collected love word
+      if(letters.length > 0) {
+        const fullWord = 'SEVİYORUM';
+        const wordStr = fullWord.split('').map(c => letters.includes(c) ? c : '·').join(' ');
+        this.add.text(W/2, 410, '💌 ' + wordStr, {fontFamily:'Fredoka One, cursive',fontSize:'14px',color:'#FF6B9D'}).setOrigin(0.5).setDepth(10);
+      }
     }
     // Replay
     const bb=this.add.graphics();bb.fillStyle(COLORS.gold,1);bb.fillRoundedRect(W/2-100,425,200,50,25);bb.setDepth(10);

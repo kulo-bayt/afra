@@ -26,10 +26,12 @@ const LEVELS = {
     ground: [[0,1600]],
     steps: [],
     floats: [
-      [350,390,100],
-      [700,380,100],
-      [1050,370,100],
-      [1350,360,100],
+      [300,400,100],   // alçak
+      [550,380,80],    // orta
+      [700,350,80],    // yüksek – merdiven efekti
+      [950,400,100],   // alçak – nefes
+      [1200,370,80],   // orta
+      [1380,340,100],  // yüksek – crush'a çıkış
     ],
     qBlocks: [[550,370,'coin'],[1200,340,'heart']],
     bricks: [],
@@ -43,7 +45,7 @@ const LEVELS = {
       [1370,320],[1390,320],[1410,320],
     ],
     powerUps: [],
-    enemies: [[600,50,false],[1000,50,false]],
+    enemies: [[600,80,false],[1050,80,false]],
     movingPlats: [],
     springs: [[850,448]],
     signs: [[200,420,'Hadi Afra!'],[1150,420,'Az kaldı!']],
@@ -58,14 +60,14 @@ const LEVELS = {
     ground: [[0,500],[580,500],[1160,400],[1640,400],[2120,280]],
     steps: [],
     floats: [
-      [550,390,100],
-      [850,380,100],
-      [1100,390,80],    // boşluk 2 yakını
-      [1400,370,100],
-      [1580,390,80],    // boşluk 3 yakını
-      [1850,380,100],
-      [2060,390,80],    // boşluk 4 yakını
-      [2250,380,100],
+      [550,400,100],   // alçak
+      [800,370,80],    // orta
+      [1050,340,80],   // yüksek – merdiven
+      [1300,400,100],  // alçak – nefes
+      [1550,370,80],   // orta
+      [1800,340,80],   // yüksek
+      [2050,400,100],  // alçak – nefes
+      [2250,380,100],  // crush'a geçiş
     ],
     qBlocks: [[400,370,'coin'],[1000,350,'shield'],[1800,340,'speed']],
     bricks: [],
@@ -83,7 +85,7 @@ const LEVELS = {
       [2270,340],[2290,340],[2310,340],
     ],
     powerUps: [],
-    enemies: [[700,55,false],[1200,60,false],[1600,55,false],[2100,55,false]],
+    enemies: [[700,90,false],[1250,85,false],[1700,90,false],[2100,85,false]],
     movingPlats: [[550,360,100,120,0,2200]],
     springs: [[950,448],[1900,448]],
     signs: [[250,420,'Kalbin yolunu bilir'],[1500,420,'Neredeyse orada!']],
@@ -98,17 +100,18 @@ const LEVELS = {
     ground: [[0,420],[520,380],[1000,380],[1480,380],[1960,380],[2440,380],[2920,280]],
     steps: [],
     floats: [
-      [440,390,80],    // boşluk 1 köprü
-      [750,380,100],
-      [940,390,80],    // boşluk 2 köprü
-      [1250,380,100],
-      [1420,390,80],   // boşluk 3 köprü
-      [1700,380,100],
-      [1900,390,80],   // boşluk 4 köprü
-      [2200,370,100],
-      [2380,390,80],   // boşluk 5 köprü
-      [2700,370,100],
-      [3000,360,100],
+      [440,400,80],    // köprü – alçak
+      [700,370,80],    // orta
+      [940,400,80],    // köprü – alçak
+      [1200,360,80],   // yüksek
+      [1420,400,80],   // köprü – alçak
+      [1650,370,80],   // orta
+      [1900,340,80],   // yüksek – merdiven
+      [2150,400,100],  // alçak – nefes
+      [2380,400,80],   // köprü – alçak
+      [2650,370,80],   // orta
+      [2850,340,80],   // yüksek
+      [3020,370,100],  // crush'a geçiş
     ],
     qBlocks: [[350,380,'coin'],[1100,360,'heart'],[1800,360,'shield'],[2500,360,'star']],
     bricks: [],
@@ -128,7 +131,7 @@ const LEVELS = {
       [3060,320],[3080,320],[3100,320],
     ],
     powerUps: [[1550,360,'speed']],
-    enemies: [[650,60,false],[1200,60,false],[1700,60,false],[2300,60,false],[3050,70,true]],
+    enemies: [[650,95,false],[1200,90,false],[1700,95,false],[2300,90,false],[3050,100,true]],
     movingPlats: [[700,360,100,100,0,2000],[2100,360,100,100,0,2200]],
     springs: [[900,448],[2650,448]],
     signs: [[250,420,'Son düzlük!'],[1600,420,'Aşk engel tanımaz'],[2800,420,'Hadi, koş!']],
@@ -938,19 +941,26 @@ class GameScene extends Phaser.Scene {
       const e = this.physics.add.sprite(x, H-100, 'baby');
       e.setScale(boss ? 0.18 : 0.13);
       e.body.setAllowGravity(true);
+      e.body.setBounceX(1); // duvar/kenardan sekme
       e.body.setSize(200,650); e.body.setOffset(70,80);
       e.setDepth(5); e.isBoss=boss||false; e.patrolSpeed=spd;
-      e.patrolOrigin = x; e.patrolRange = boss ? 200 : 120;
+      e.patrolOrigin = x; e.patrolRange = boss ? 250 : 150;
       e.setVelocityX(spd);
       this.enemies.add(e);
 
       if(boss) {
         e.setTint(0xff6b6b);
-        e.setScale(0.22); // extra big boss baby!
+        e.setScale(0.25); // KOCA bebek!
+        e.bossHP = 3; // 3 kez ezilmesi lazım
         // Wobble animation
-        this.tweens.add({targets:e, angle:{from:-8,to:8}, duration:400, yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
-        this.time.addEvent({delay:2500,loop:true,callback:()=>{
-          if(e.active&&e.body&&e.body.blocked.down) e.setVelocityY(-280);
+        this.tweens.add({targets:e, angle:{from:-10,to:10}, duration:350, yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
+        // Periodic jump + speed up
+        this.time.addEvent({delay:2000,loop:true,callback:()=>{
+          if(e.active&&e.body&&e.body.blocked.down) {
+            e.setVelocityY(-300);
+            // Random direction change on jump
+            e.setVelocityX(Phaser.Math.Between(0,1) ? Math.abs(e.patrolSpeed) : -Math.abs(e.patrolSpeed));
+          }
         }});
       } else {
         // Normal enemies: occasional random jump (Mario-style)
@@ -1033,14 +1043,35 @@ class GameScene extends Phaser.Scene {
     // STOMP: player falling onto enemy from above = kill enemy (Mario-style)
     if(player.body.velocity.y > 0 && player.y < enemy.y - 10) {
       player.setVelocityY(-400);
-      // Combo system
+
+      // Boss: needs multiple stomps
+      if(enemy.isBoss && enemy.bossHP > 1) {
+        enemy.bossHP--;
+        this.cameras.main.shake(150, 0.01);
+        this.showFloatingText(enemy.x, enemy.y-30, 'HP: '+enemy.bossHP+'/3', '#ff4757');
+        this.spawnBurst(enemy.x, enemy.y, COLORS.red, 8);
+        // Boss gets angry: faster + flash red
+        enemy.patrolSpeed *= 1.3;
+        enemy.setVelocityX(enemy.body.velocity.x > 0 ? enemy.patrolSpeed : -enemy.patrolSpeed);
+        this.tweens.add({targets:enemy, alpha:0.3, duration:80, yoyo:true, repeat:3});
+        // Boss angry line
+        const bossLines = ['ACIDI!','KIZIYORUM!','BU KADAR MI?!'];
+        this.showFloatingText(enemy.x, enemy.y-50, Phaser.Math.RND.pick(bossLines), '#FF6B9D');
+        this.score += 100;
+        this.updateHUD();
+        return;
+      }
+
+      // Normal kill or final boss stomp
       this.stompCombo++;
       this.comboTimer = 1500;
-      const basePoints = 200;
       const combo = Math.min(this.stompCombo, 5);
-      const points = basePoints * combo;
-      const msgs = ['Ezildim!','Ayyy!','Anne!','Acıdı!','Hıh!'];
+      const points = (enemy.isBoss ? 500 : 200) * combo;
+      const msgs = enemy.isBoss
+        ? ['YENILDIIIM!','Altımı değiştirin!','AĞLIYORUUUM!']
+        : ['Ezildim!','Ayyy!','Anne!','Acıdı!','Hıh!'];
       this.squashEnemy(enemy, points, Phaser.Math.RND.pick(msgs));
+      if(enemy.isBoss) this.cameras.main.shake(300, 0.015);
       if(combo >= 2) this.showFloatingText(player.x, player.y-50, 'x'+combo+' COMBO!', '#FFD93D');
       return;
     }

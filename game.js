@@ -22,136 +22,116 @@ const LEVELS = {
   // Level 1 - "İlk Adım" (Kolay): Sürekli zemin, engeller basit
   1: {
     world: 1600,
-    ground: [[0,1600]], // continuous - no gaps
+    ground: [[0,1600]],
     steps: [[280,420],[320,420],[320,380]],
     floats: [
-      [450,400,80],    // alçak – kolay giriş
-      [580,370,100],   // orta
-      [700,400,80],    // tekrar alçak – ritim değişimi
-      [820,340,100],   // yüksek – trambolin sonrası iniş
-      [960,390,90],    // alçak
-      [1100,360,120],  // orta
-      [1250,320,80],   // yüksek – trambolin bölgesi
+      [500,390,100],   // giriş platformu
+      [750,370,100],   // orta
+      [1000,380,90],   // orta
+      [1200,360,100],  // yüksekçe
       [1380,350,100],  // crush'a geçiş
     ],
-    qBlocks: [[300,370,'coin'],[600,330,'coin'],[840,300,'heart'],[1120,320,'coin']],
-    bricks: [[320,370],[1140,320]],
-    pipes: [[400,50],[900,50]],
+    qBlocks: [[350,370,'coin'],[850,340,'heart'],[1100,340,'coin']],
+    bricks: [[370,370]],
+    pipes: [[450,50],[950,50]],
     coins: [
       [80,420],[120,420],[160,420],[200,420],
-      [470,360],[490,360],[510,360],
-      [550,280],[550,240],[550,200],  // coin column above spring!
-      [710,360],[730,340],[750,320],  // kademeli arc
-      [830,300],[850,300],
-      [970,350],[990,350],[1010,350],
-      [1120,320],[1140,320],[1160,320],
-      [1100,280],[1100,240],[1100,200],  // coin column above spring!
+      [520,350],[540,350],[560,350],
+      [650,280],[650,240],[650,200],  // spring üstü
+      [760,330],[780,330],[800,330],
+      [1010,340],[1030,340],[1050,340],
+      [1150,280],[1150,240],[1150,200],  // spring üstü
       [1400,310],[1420,310],[1440,310],
     ],
     powerUps: [],
-    enemies: [[560,55,false],[1000,60,false]],
+    enemies: [[600,55,false],[1050,55,false]],
     movingPlats: [],
-    springs: [[550,448],[1100,448]],
-    signs: [[250,400,'Hadi Afra!'],[750,330,'O seni bekliyor...'],[1200,350,'Az kaldı!']],
+    springs: [[650,448],[1150,448]],
+    signs: [[250,400,'Hadi Afra!'],[900,400,'O seni bekliyor...']],
     checkpoint: 800,
-    letters: [[350,380,'S'],[700,320,'E'],[1150,320,'V']],
+    letters: [[400,390,'S'],[750,330,'E'],[1300,330,'V']],
     crush: [1520, 290]
   },
-  // Level 2 - "Yükselen Kalpler" (Orta): 3 boşluk, 4 düşman, 1 hareketli platform
+  // Level 2 - "Yükselen Kalpler" (Orta)
   2: {
     world: 2400,
     ground: [[0,520],[600,400],[1080,400],[1560,380],[1960,440]],
     steps: [[200,420],[240,420],[240,380]],
     floats: [
-      [500,400,80],    // alçak – boşluk köprüsü
-      [680,370,100],   // orta
-      [850,340,80],    // yüksek
-      [1000,400,90],   // alçak – iniş
-      [1180,370,100],  // orta – merdiven başlangıcı
-      [1320,340,80],   // yüksek
-      [1540,390,100],  // alçak – nefes al
-      [1750,350,120],  // orta-yüksek
-      [1950,400,80],   // alçak
-      [2100,340,120],  // yüksek – trambolin bölgesi
-      [2250,370,100],  // crush'a geçiş
+      [520,390,100],
+      [780,370,100],
+      [1050,390,100],
+      [1350,360,100],
+      [1600,380,100],
+      [1850,370,100],
+      [2100,360,120],
+      [2250,380,100],
     ],
-    qBlocks: [[260,370,'coin'],[560,340,'shield'],[840,320,'coin'],[1100,340,'speed'],[1580,310,'coin'],[2100,310,'heart']],
-    bricks: [[280,370],[860,320],[1120,340],[2120,310]],
-    pipes: [[380,50],[950,60],[1450,50]],
+    qBlocks: [[350,370,'coin'],[900,340,'shield'],[1400,340,'speed'],[2150,320,'heart']],
+    bricks: [[370,370],[920,340]],
+    pipes: [[450,50],[1000,60],[1500,50]],
     coins: [
       [80,420],[120,420],[160,420],
-      [420,380],[440,360],[460,340],
-      [750,280],[750,240],[750,200],  // above spring
-      [620,420],[660,420],
-      [790,320],[830,320],
-      [1000,420],[1040,420],
-      [1450,280],[1450,240],[1450,200],  // above spring
-      [1200,340],[1240,340],[1280,340],
-      [1550,300],[1570,300],
-      [2000,280],[2000,240],[2000,200],  // above spring
-      [1810,320],[1850,320],
-      [1980,420],[2020,420],[2060,420],
-      [2260,310],[2300,310],[2340,310]
+      [540,350],[560,350],[580,350],
+      [700,280],[700,240],[700,200],  // spring üstü
+      [790,330],[810,330],
+      [1060,350],[1080,350],
+      [1360,320],[1380,320],[1400,320],
+      [1610,340],[1630,340],
+      [1860,330],[1880,330],
+      [2000,420],[2040,420],
+      [2260,340],[2280,340],[2300,340]
     ],
-    powerUps: [[1400,380,'speed']],
-    enemies: [[480,65,false],[900,70,false],[1350,75,false],[1900,70,false]],
-    movingPlats: [[540,340,100,120,0,2200]],
-    springs: [[750,448],[1450,448],[2000,448]],
-    signs: [[300,400,'Kalbin yolunu bilir'],[800,340,'Pes etme!'],[1500,350,'Sana aşığım diyecek'],[2100,330,'Neredeyse orada!']],
+    powerUps: [[1250,380,'speed']],
+    enemies: [[650,60,false],[1100,65,false],[1700,65,false],[2050,60,false]],
+    movingPlats: [[540,350,100,120,0,2200]],
+    springs: [[700,448],[1800,448]],
+    signs: [[300,400,'Kalbin yolunu bilir'],[1150,400,'Pes etme!'],[2000,400,'Neredeyse orada!']],
     checkpoint: 1200,
-    letters: [[500,380,'İ'],[1100,340,'Y'],[1800,340,'O']],
+    letters: [[550,380,'İ'],[1300,350,'Y'],[1900,350,'O']],
     crush: [2320, 290]
   },
-  // Level 3 - "Son Dans" (Zor): 4 geniş boşluk, 5 düşman + 1 boss, 2 hareketli platform
+  // Level 3 - "Son Dans" (Zor ama eğlenceli)
   3: {
     world: 3200,
-    ground: [[0,380],[500,300],[920,260],[1300,280],[1680,240],[2040,260],[2400,240],[2720,280],[2980,220]],
-    steps: [[2980,420],[3020,420],[3020,380],[3060,380]],
+    ground: [[0,400],[500,320],[1000,280],[1500,300],[2000,260],[2500,300],[2900,300]],
+    steps: [[2900,420],[2940,420],[2940,380]],
     floats: [
-      [380,400,80],    // alçak köprü
-      [550,370,70],    // orta – dar!
-      [700,340,90],    // yüksek
-      [880,400,80],    // alçak – iniş
-      [1050,370,70],   // orta – dar!
-      [1200,330,100],  // yüksek
-      [1400,400,80],   // alçak – nefes
-      [1580,350,90],   // orta
-      [1750,320,70],   // yüksek – dar!
-      [1900,390,100],  // alçak – trambolin bölgesi
-      [2100,350,80],   // orta
-      [2300,310,100],  // yüksek
-      [2500,400,80],   // alçak – trambolin
-      [2700,360,90],   // orta
-      [2880,330,100],  // yüksek
-      [3080,350,100],  // crush'a geçiş
+      [420,390,100],
+      [700,370,100],
+      [950,390,100],
+      [1250,370,100],
+      [1550,380,100],
+      [1850,370,100],
+      [2150,380,100],
+      [2450,370,100],
+      [2750,360,100],
+      [3000,350,100],
     ],
-    qBlocks: [[200,370,'coin'],[440,340,'heart'],[720,320,'shield'],[1160,330,'coin'],[1420,310,'star'],[1900,310,'speed'],[2380,310,'magnet'],[2660,330,'heart'],[3100,300,'star']],
-    bricks: [[220,370],[240,370],[740,320],[1180,330],[1440,310],[2400,310],[2680,330],[3120,300]],
-    pipes: [[300,50],[780,60],[1480,50],[2080,60],[2860,50]],
+    qBlocks: [[350,370,'coin'],[800,340,'heart'],[1350,340,'shield'],[1950,340,'star'],[2600,340,'speed']],
+    bricks: [[370,370],[820,340]],
+    pipes: [[450,50],[1100,50],[1700,50],[2300,50]],
     coins: [
       [60,420],[100,420],[140,420],[180,420],
-      [400,340],[420,320],[440,310],[460,320],[480,340],
-      [560,420],[600,420],
-      [700,300],[740,300],[780,300],
-      [930,360],[970,360],
-      [1150,310],[1190,310],[1230,310],
-      [1390,300],[1430,300],[1470,300],
-      [1640,340],[1680,340],
-      [1870,300],[1910,300],[1950,300],
-      [2110,340],[2150,340],[2190,340],
-      [2350,300],[2390,300],[2430,300],
-      [2630,320],[2670,320],
-      [3000,380],[3040,350],[3080,320],
-      [3130,290],[3160,290]
+      [440,350],[460,350],[480,350],
+      [710,330],[730,330],[750,330],
+      [900,280],[900,240],[900,200],  // spring üstü
+      [1260,330],[1280,330],[1300,330],
+      [1560,340],[1580,340],
+      [1860,330],[1880,330],[1900,330],
+      [2160,340],[2180,340],
+      [2460,330],[2480,330],[2500,330],
+      [2600,280],[2600,240],[2600,200],  // spring üstü
+      [3010,310],[3030,310],[3050,310]
     ],
-    powerUps: [[1640,330,'speed'],[2630,320,'shield']],
-    enemies: [[340,75,false],[700,80,false],[1300,85,false],[1800,80,false],[2400,85,false],[3060,90,true]],
-    movingPlats: [[440,350,90,100,0,2000],[1780,350,90,100,0,2200]],
-    springs: [[600,448],[1450,448],[2150,448],[2750,448]],
-    signs: [[200,400,'Son düzlük!'],[800,330,'Aşk engel tanımaz'],[1500,340,'Bebeklerden korkma!'],[2200,330,'O seni seviyor'],[2900,350,'Hadi, koş!']],
+    powerUps: [[1600,370,'speed']],
+    enemies: [[550,70,false],[1000,75,false],[1600,70,false],[2200,75,false],[3050,80,true]],
+    movingPlats: [[650,360,100,120,0,2000],[2050,360,100,100,0,2200]],
+    springs: [[900,448],[2600,448]],
+    signs: [[250,400,'Son düzlük!'],[1450,400,'Aşk engel tanımaz'],[2800,400,'Hadi, koş!']],
     checkpoint: 1600,
-    letters: [[400,380,'R'],[1200,340,'U'],[2400,340,'M']],
-    crush: [3140, 270]
+    letters: [[500,380,'R'],[1800,360,'U'],[2700,350,'M']],
+    crush: [3100, 290]
   }
 };
 
@@ -800,10 +780,8 @@ class GameScene extends Phaser.Scene {
     if(letter.lGfx) letter.lGfx.destroy();
     if(letter.lTxt) letter.lTxt.destroy();
 
-    // Big celebration
     this.showFloatingText(letter.x, letter.y-20, '💌 ' + ch + '!', '#FF6B9D');
-    this.spawnBurst(letter.x, letter.y, COLORS.pink, 12);
-    this.cameras.main.flash(200, 255, 107, 157, true);
+    this.spawnBurst(letter.x, letter.y, COLORS.pink, 8);
     this.score += 150;
     letter.destroy();
     this.updateHUD();
@@ -957,6 +935,7 @@ class GameScene extends Phaser.Scene {
       e.body.setAllowGravity(true);
       e.body.setSize(200,650); e.body.setOffset(70,80);
       e.setDepth(5); e.isBoss=boss||false; e.patrolSpeed=spd;
+      e.patrolOrigin = x; e.patrolRange = boss ? 200 : 120;
       e.setVelocityX(spd);
       this.enemies.add(e);
 
@@ -1406,11 +1385,15 @@ class GameScene extends Phaser.Scene {
       this.tweens.add({targets:s,alpha:0,y:s.y-20,duration:400,onComplete:()=>s.destroy()});
     }
 
-    // Enemy AI
+    // Enemy AI – patrol back and forth within range
     this.enemies.getChildren().forEach(e=>{
       if(!e.active||!e.body) return;
+      // Turn at walls
       if(e.body.blocked.left) e.setVelocityX(Math.abs(e.patrolSpeed));
       else if(e.body.blocked.right) e.setVelocityX(-Math.abs(e.patrolSpeed));
+      // Turn at patrol range edges
+      if(e.x < e.patrolOrigin - e.patrolRange) e.setVelocityX(Math.abs(e.patrolSpeed));
+      else if(e.x > e.patrolOrigin + e.patrolRange) e.setVelocityX(-Math.abs(e.patrolSpeed));
       e.setFlipX(e.body.velocity.x<0);
     });
 

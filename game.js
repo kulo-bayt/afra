@@ -234,7 +234,7 @@ class StoryScene extends Phaser.Scene {
     this.add.text(W/2,70,'Level '+lv,{fontFamily:'Fredoka One, cursive',fontSize:'32px',color:'#FFD93D',stroke:'#C44569',strokeThickness:4}).setOrigin(0.5);
     this.add.text(W/2,110,names[lv]||'',{fontFamily:'Fredoka One, cursive',fontSize:'20px',color:'#FF6B9D'}).setOrigin(0.5);
     const str=stories[lv]||stories[1];
-    const txt=this.add.text(W/2,250,'',{fontFamily:'Fredoka One, cursive',fontSize:'12px',color:'#fff',align:'center',lineSpacing:4,wordWrap:{width:W-100}}).setOrigin(0.5);
+    const txt=this.add.text(W/2,260,'',{fontFamily:'Fredoka One, cursive',fontSize:'15px',color:'#fff',align:'center',lineSpacing:5,wordWrap:{width:W-80}}).setOrigin(0.5);
     let ci=0;
     this.time.addEvent({delay:30,repeat:str.length-1,callback:()=>{ci++;txt.setText(str.substring(0,ci));}});
     this.time.delayedCall(str.length*30+500,()=>{
@@ -948,21 +948,29 @@ class GameScene extends Phaser.Scene {
         e.setTint(0xff6b6b);
         e.setScale(0.22);
         e.bossHP = 3;
-        // Walk immediately
         e.setVelocityX(spd);
-        // Jump + change direction periodically
         this.time.addEvent({delay:1800,loop:true,callback:()=>{
           if(!e.active||!e.body) return;
           if(e.body.blocked.down) {
             e.setVelocityY(-300);
-            // Reverse direction on jump
             const newDir = e.body.velocity.x >= 0 ? -Math.abs(e.patrolSpeed) : Math.abs(e.patrolSpeed);
             e.setVelocityX(newDir);
           }
         }});
       } else {
-        // Normal enemies walk back and forth
-        e.setVelocityX(Phaser.Math.Between(0,1) ? spd : -spd);
+        // Level 1: bebekler duruyor, Level 2: yarısı yürüyor, Level 3: hepsi
+        const lv = this.currentLevel;
+        if(lv === 1) {
+          e.setVelocityX(0);
+          e.patrolSpeed = 0;
+        } else if(lv === 2) {
+          // Her ikinci bebek yürüsün
+          const idx = this.enemies.getChildren().length;
+          if(idx % 2 === 0) { e.setVelocityX(0); e.patrolSpeed = 0; }
+          else { e.setVelocityX(Phaser.Math.Between(0,1) ? spd : -spd); }
+        } else {
+          e.setVelocityX(Phaser.Math.Between(0,1) ? spd : -spd);
+        }
       }
 
       // Funny speech bubbles

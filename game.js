@@ -226,26 +226,21 @@ class StoryScene extends Phaser.Scene {
     const lv=data.level||1, W=this.scale.width, H=this.scale.height;
     const bg=this.add.graphics();bg.fillStyle(COLORS.darkBg,1);bg.fillRect(0,0,W,H);bg.lineStyle(4,COLORS.pink,0.6);bg.strokeRoundedRect(30,30,W-60,H-60,20);
     const stories={
-      1:"Afrodit bir sabah uyanır ve\nÇengelköy'ün güzel semalarını\nizlerken canı fileden\nmisket peynir çeker...\n\nAma filenin önünde\nÖmer Faruk onu bekliyor!\n\nO da ne? Hazan Bebek mi???\nOnları ez ya da atla!",
-      2:"Hazan bebek erken yaşta kreşe\ngiderek iyice yaramaz oldu,\no çok zeki bir bebek!\n\nAma bir Büyükkayıkçı\nasla pes etmez!\n\nOyuna devam et ve\nAkçaabat köftene kavuş!",
-      3:"Son level başlıyor!\n\nAşk her engeli yener!\n\nNurten kardeşinden öğrendiğin\ntaktikleri uygula\nve aşkına kavuş.\n\nBelki Titiz'de pasta da yersiniz..\n\nHadi Afra, göster gücünü!"
+      1:"Afrodit bir sabah uyanır ve\nçengelköyün güzel semalarını izlerken\ncanı fileden misket peynir çeker,\n\nAma o da ne..\n\nFilenin önünde Ömer Faruk\nonu bekliyor! Galiba bu sefer\nkavuşacaklar, çok güzel ama..\n\nÖnünde bazı engeller var gibi?\nO da kim? Ne? Hazan Bebek mi???\n\nOnları ez ya da üstünden atla\nve sevdana kavuş!",
+      2:"Hazan bebek erken yaşta kreşe\ngiderek iyice yaramaz oldu,\no çok zeki bir bebek,\n\nAma bir Büyükkayıkçı\nasla pes etmez,\n\nOyuna devam et ve\nAkçaabat köftene kavuş!",
+      3:"Son level başlıyor,\n\nAşk her engeli yener!\n\nNurten kardeşinden öğrendiğin\ntaktikleri uygula ve aşkına kavuş.\n\nBelki titizde pasta da yersiniz..\n\nHadi afra göster gücünü!"
     };
     const names={1:'Misket Peynir',2:'Kreş Kaçkını',3:'Son Dans'};
     this.add.text(W/2,70,'Level '+lv,{fontFamily:'Fredoka One, cursive',fontSize:'32px',color:'#FFD93D',stroke:'#C44569',strokeThickness:4}).setOrigin(0.5);
     this.add.text(W/2,110,names[lv]||'',{fontFamily:'Fredoka One, cursive',fontSize:'20px',color:'#FF6B9D'}).setOrigin(0.5);
-    // Show Afra character
-    const afraImg = this.add.image(W/2, 170, 'afra').setScale(0.12).setAlpha(0);
-    this.tweens.add({targets:afraImg, alpha:1, y:160, duration:500, ease:'Back.easeOut'});
-    this.tweens.add({targets:afraImg, y:155, duration:1000, yoyo:true, repeat:-1, ease:'Sine.easeInOut', delay:500});
-
     const str=stories[lv]||stories[1];
-    const txt=this.add.text(W/2,280,'',{fontFamily:'Fredoka One, cursive',fontSize:'14px',color:'#fff',align:'center',lineSpacing:6}).setOrigin(0.5);
+    const txt=this.add.text(W/2,250,'',{fontFamily:'Fredoka One, cursive',fontSize:'12px',color:'#fff',align:'center',lineSpacing:4,wordWrap:{width:W-100}}).setOrigin(0.5);
     let ci=0;
-    this.time.addEvent({delay:40,repeat:str.length-1,callback:()=>{ci++;txt.setText(str.substring(0,ci));}});
-    this.time.delayedCall(str.length*40+500,()=>{
-      const bb=this.add.graphics();bb.fillStyle(COLORS.pink,1);bb.fillRoundedRect(W/2-80,400,160,50,25);
-      const bt=this.add.text(W/2,425,'Devam',{fontFamily:'Fredoka One, cursive',fontSize:'22px',color:'#fff'}).setOrigin(0.5);
-      const z=this.add.zone(W/2,425,160,50).setInteractive({useHandCursor:true});
+    this.time.addEvent({delay:30,repeat:str.length-1,callback:()=>{ci++;txt.setText(str.substring(0,ci));}});
+    this.time.delayedCall(str.length*30+500,()=>{
+      const bb=this.add.graphics();bb.fillStyle(COLORS.pink,1);bb.fillRoundedRect(W/2-80,430,160,45,22);
+      const bt=this.add.text(W/2,452,'Devam',{fontFamily:'Fredoka One, cursive',fontSize:'20px',color:'#fff'}).setOrigin(0.5);
+      const z=this.add.zone(W/2,452,160,45).setInteractive({useHandCursor:true});
       this.tweens.add({targets:[bb,bt,z],scaleX:1.05,scaleY:1.05,duration:600,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
       z.on('pointerdown',()=>this.scene.start('GameScene',{level:lv, hearts:data.hearts, score:data.score, coinCount:data.coinCount, purchasedItems:data.purchasedItems, collectedLetters:data.collectedLetters}));
     });
@@ -1669,20 +1664,20 @@ class WinScene extends Phaser.Scene {
       this.tweens.add({targets:hg,scaleX:1.3,scaleY:1.3,duration:Phaser.Math.Between(800,1500),yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     }
     // Title
-    const title=this.add.text(W/2,55,"İyi ki Doğdun\nAfra!",{fontFamily:'Fredoka One, cursive',fontSize:'40px',color:'#fff',align:'center',stroke:'#C44569',strokeThickness:6,lineSpacing:6,shadow:{offsetX:3,offsetY:3,color:'#00000044',blur:10,fill:true}}).setOrigin(0.5).setDepth(10);
+    const title=this.add.text(W/2,50,"İyi ki doğdun\nafra!",{fontFamily:'Fredoka One, cursive',fontSize:'36px',color:'#fff',align:'center',stroke:'#C44569',strokeThickness:6,lineSpacing:4,shadow:{offsetX:3,offsetY:3,color:'#00000044',blur:10,fill:true}}).setOrigin(0.5).setDepth(10);
     this.tweens.add({targets:title,scaleX:1.05,scaleY:1.05,duration:1200,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     // Characters - iki Afra (abla kardeş!)
-    const afra=this.add.image(W/2-45,195,'afra').setScale(0.14).setDepth(10);
-    const afra2=this.add.image(W/2+45,195,'afra').setScale(0.14).setFlipX(true).setDepth(10);
-    this.tweens.add({targets:[afra,afra2],y:185,duration:1500,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+    const afra=this.add.image(W/2-45,170,'afra').setScale(0.12).setDepth(10);
+    const afra2=this.add.image(W/2+45,170,'afra').setScale(0.12).setFlipX(true).setDepth(10);
+    this.tweens.add({targets:[afra,afra2],y:162,duration:1500,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     // Hearts between
     this.time.addEvent({delay:600,loop:true,callback:()=>{
       const hg=this.add.graphics();hg.fillStyle(COLORS.red,0.9);hg.beginPath();hg.arc(-3,-2,3,Math.PI,0,false);hg.arc(3,-2,3,Math.PI,0,false);hg.lineTo(0,5);hg.closePath();hg.fillPath();
-      hg.setPosition(W/2+Phaser.Math.Between(-15,15),185);hg.setDepth(11);
-      this.tweens.add({targets:hg,y:145,alpha:0,scaleX:1.5,scaleY:1.5,duration:1500,onComplete:()=>hg.destroy()});
+      hg.setPosition(W/2+Phaser.Math.Between(-15,15),165);hg.setDepth(11);
+      this.tweens.add({targets:hg,y:130,alpha:0,scaleX:1.5,scaleY:1.5,duration:1500,onComplete:()=>hg.destroy()});
     }});
-    // Message
-    this.add.text(W/2,280,'Sen bu dünyadaki\nen güzel hediyesin,\nNice mutlu yıllara!\n\nÖmer Faruk\'u boşver de\nkeşke biz bi kavuşabilseydik\nabla kardeş\n\nSeni çok seviyorum',{fontFamily:'Fredoka One, cursive',fontSize:'13px',color:'#fff',align:'center',lineSpacing:5,shadow:{offsetX:1,offsetY:1,color:'#00000033',blur:4,fill:true}}).setOrigin(0.5).setDepth(10);
+    // Message - birebir orijinal metin
+    this.add.text(W/2,280,'Sen bu dünyadaki en güzel hediyesin,\nNice mutlu yıllara\n\nÖmer faruğu boşver de\nkeşke biz bi kavuşabilseydik\nabla kardeş\n\nSeni çok seviyorum',{fontFamily:'Fredoka One, cursive',fontSize:'13px',color:'#fff',align:'center',lineSpacing:5,shadow:{offsetX:1,offsetY:1,color:'#00000033',blur:4,fill:true}}).setOrigin(0.5).setDepth(10);
     // Stats
     if(score>0||coins>0){
       const statsLine = 'Skor: '+score+(coins>0?'  |  Coin: '+coins:'');

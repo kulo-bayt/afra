@@ -226,11 +226,11 @@ class StoryScene extends Phaser.Scene {
     const lv=data.level||1, W=this.scale.width, H=this.scale.height;
     const bg=this.add.graphics();bg.fillStyle(COLORS.darkBg,1);bg.fillRect(0,0,W,H);bg.lineStyle(4,COLORS.pink,0.6);bg.strokeRoundedRect(30,30,W-60,H-60,20);
     const stories={
-      1:"Afra bir sabah uyandığında, bugünün\nçok özel olduğunu hissetti...\nYaramaz bebekler yolunu kesiyor!\nOnları ez ya da atla, hedefe ulaş!",
-      2:"Bebekler daha da yaramaz oldu!\nAma Afra pes etmez...\nTramboline bas, yükseğe uç,\nve kalbine kavuş!",
-      3:"Son dans başlıyor...\nEn büyük bebek onu bekliyor!\nAma aşk her engeli yener...\nHadi Afra, göster gücünü!"
+      1:"Afrodit bir sabah uyanır ve\nÇengelköy'ün güzel semalarını\nizlerken canı fileden\nmisket peynir çeker...\n\nAma filenin önünde\nÖmer Faruk onu bekliyor!\n\nO da ne? Hazan Bebek mi???\nOnları ez ya da atla!",
+      2:"Hazan bebek erken yaşta kreşe\ngiderek iyice yaramaz oldu,\no çok zeki bir bebek!\n\nAma bir Büyükkayıkçı\nasla pes etmez!\n\nOyuna devam et ve\nAkçaabat köftene kavuş!",
+      3:"Son level başlıyor!\n\nAşk her engeli yener!\n\nNurten kardeşinden öğrendiğin\ntaktikleri uygula\nve aşkına kavuş.\n\nBelki Titiz'de pasta da yersiniz..\n\nHadi Afra, göster gücünü!"
     };
-    const names={1:'İlk Adım',2:'Yükselen Kalpler',3:'Son Dans'};
+    const names={1:'Misket Peynir',2:'Kreş Kaçkını',3:'Son Dans'};
     this.add.text(W/2,70,'Level '+lv,{fontFamily:'Fredoka One, cursive',fontSize:'32px',color:'#FFD93D',stroke:'#C44569',strokeThickness:4}).setOrigin(0.5);
     this.add.text(W/2,110,names[lv]||'',{fontFamily:'Fredoka One, cursive',fontSize:'20px',color:'#FF6B9D'}).setOrigin(0.5);
     // Show Afra character
@@ -239,7 +239,7 @@ class StoryScene extends Phaser.Scene {
     this.tweens.add({targets:afraImg, y:155, duration:1000, yoyo:true, repeat:-1, ease:'Sine.easeInOut', delay:500});
 
     const str=stories[lv]||stories[1];
-    const txt=this.add.text(W/2,260,'',{fontFamily:'Fredoka One, cursive',fontSize:'20px',color:'#fff',align:'center',lineSpacing:8}).setOrigin(0.5);
+    const txt=this.add.text(W/2,280,'',{fontFamily:'Fredoka One, cursive',fontSize:'14px',color:'#fff',align:'center',lineSpacing:6}).setOrigin(0.5);
     let ci=0;
     this.time.addEvent({delay:40,repeat:str.length-1,callback:()=>{ci++;txt.setText(str.substring(0,ci));}});
     this.time.delayedCall(str.length*40+500,()=>{
@@ -295,6 +295,7 @@ class GameScene extends Phaser.Scene {
 
     // Mobile
     this.mobileLeft=false; this.mobileRight=false; this.mobileJump=false;
+    this.mobileJumpJust=false; // single-frame trigger for jump
     this.setupMobileControls();
 
     // Background
@@ -330,10 +331,10 @@ class GameScene extends Phaser.Scene {
 
     // Player
     const startX = this.spawnX || 60;
-    this.player = this.physics.add.sprite(startX, H-120, 'afra').setScale(0.13);
+    this.player = this.physics.add.sprite(startX, H-120, 'afra').setScale(0.10);
     this.player.setCollideWorldBounds(false);
-    this.player.body.setSize(200,650);
-    this.player.body.setOffset(70,80);
+    this.player.body.setSize(220,600);
+    this.player.body.setOffset(60,120);
     this.player.setDepth(10);
 
     // Mario-style jump state
@@ -950,23 +951,23 @@ class GameScene extends Phaser.Scene {
 
       if(boss) {
         e.setTint(0xff6b6b);
-        e.setScale(0.25); // KOCA bebek!
-        e.bossHP = 3; // 3 kez ezilmesi lazım
-        // Wobble animation
-        this.tweens.add({targets:e, angle:{from:-10,to:10}, duration:350, yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
-        // Periodic jump + speed up
-        this.time.addEvent({delay:2000,loop:true,callback:()=>{
-          if(e.active&&e.body&&e.body.blocked.down) {
+        e.setScale(0.22);
+        e.bossHP = 3;
+        // Walk immediately
+        e.setVelocityX(spd);
+        // Jump + change direction periodically
+        this.time.addEvent({delay:1800,loop:true,callback:()=>{
+          if(!e.active||!e.body) return;
+          if(e.body.blocked.down) {
             e.setVelocityY(-300);
-            // Random direction change on jump
-            e.setVelocityX(Phaser.Math.Between(0,1) ? Math.abs(e.patrolSpeed) : -Math.abs(e.patrolSpeed));
+            // Reverse direction on jump
+            const newDir = e.body.velocity.x >= 0 ? -Math.abs(e.patrolSpeed) : Math.abs(e.patrolSpeed);
+            e.setVelocityX(newDir);
           }
         }});
       } else {
-        // Normal enemies: occasional random jump (Mario-style)
-        this.time.addEvent({delay:Phaser.Math.Between(2500,5000),loop:true,callback:()=>{
-          if(e.active&&e.body&&e.body.blocked.down) e.setVelocityY(-200);
-        }});
+        // Normal enemies walk back and forth
+        e.setVelocityX(Phaser.Math.Between(0,1) ? spd : -spd);
       }
 
       // Funny speech bubbles
@@ -1304,6 +1305,12 @@ class GameScene extends Phaser.Scene {
       el.addEventListener('mouseleave',()=>{this[key]=false;el.classList.remove('pressed');});
     };
     add(bL,'mobileLeft');add(bR,'mobileRight');add(bJ,'mobileJump');
+    // Extra: detect jump press moment for mobile
+    const jumpEl = bJ;
+    if(jumpEl) {
+      jumpEl.addEventListener('touchstart',(e)=>{e.preventDefault();this.mobileJumpJust=true;});
+      jumpEl.addEventListener('mousedown',()=>{this.mobileJumpJust=true;});
+    }
   }
 
   // --- UPDATE ---
@@ -1375,7 +1382,7 @@ class GameScene extends Phaser.Scene {
     const left = this.cursors.left.isDown||this.wasd.left.isDown||this.mobileLeft;
     const right = this.cursors.right.isDown||this.wasd.right.isDown||this.mobileRight;
     const jumpPressed = this.cursors.up.isDown||this.wasd.up.isDown||this.wasd.space.isDown||this.mobileJump;
-    const jumpJust = Phaser.Input.Keyboard.JustDown(this.cursors.up)||Phaser.Input.Keyboard.JustDown(this.wasd.up)||Phaser.Input.Keyboard.JustDown(this.wasd.space)||this.mobileJump;
+    const jumpJust = Phaser.Input.Keyboard.JustDown(this.cursors.up)||Phaser.Input.Keyboard.JustDown(this.wasd.up)||Phaser.Input.Keyboard.JustDown(this.wasd.space)||this.mobileJumpJust;
 
     // Momentum: accelerate toward max speed, decelerate with friction
     const dtSec = dt / 1000;
@@ -1399,7 +1406,7 @@ class GameScene extends Phaser.Scene {
       if(!this.wasOnGround) {
         this.landedThisFrame = true;
         // Squash on landing
-        this.tweens.add({targets:this.player, scaleY:0.10, scaleX:0.15, duration:60, yoyo:true, ease:'Quad.easeOut'});
+        this.tweens.add({targets:this.player, scaleY:0.08, scaleX:0.12, duration:60, yoyo:true, ease:'Quad.easeOut'});
         this.spawnDust(this.player.x, this.player.body.bottom);
       }
       this.coyoteTimer = 120;
@@ -1413,6 +1420,7 @@ class GameScene extends Phaser.Scene {
     // Jump buffer: remember jump press for 100ms
     if(jumpJust) this.jumpBufferTimer = 100;
     else this.jumpBufferTimer -= dt;
+    this.mobileJumpJust = false; // consume mobile jump trigger
 
     const canJump = onGround || this.coyoteTimer > 0;
     const wantsJump = jumpJust || this.jumpBufferTimer > 0;
@@ -1421,10 +1429,11 @@ class GameScene extends Phaser.Scene {
       this.coyoteTimer = 0;
       this.jumpBufferTimer = 0;
       // Stretch on jump
-      this.tweens.add({targets:this.player, scaleY:0.15, scaleX:0.11, duration:80, yoyo:true, ease:'Quad.easeOut'});
+      this.tweens.add({targets:this.player, scaleY:0.12, scaleX:0.08, duration:80, yoyo:true, ease:'Quad.easeOut'});
       this.spawnDust(this.player.x, this.player.body.bottom);
       this.jumpHeld = true;
       this.mobileJump = false;
+      this.mobileJumpJust = false;
     }
 
     // Variable jump height
@@ -1660,20 +1669,20 @@ class WinScene extends Phaser.Scene {
       this.tweens.add({targets:hg,scaleX:1.3,scaleY:1.3,duration:Phaser.Math.Between(800,1500),yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     }
     // Title
-    const title=this.add.text(W/2,65,"İyi ki Doğdun\nAfra!",{fontFamily:'Fredoka One, cursive',fontSize:'44px',color:'#fff',align:'center',stroke:'#C44569',strokeThickness:6,lineSpacing:8,shadow:{offsetX:3,offsetY:3,color:'#00000044',blur:10,fill:true}}).setOrigin(0.5).setDepth(10);
+    const title=this.add.text(W/2,55,"İyi ki Doğdun\nAfra!",{fontFamily:'Fredoka One, cursive',fontSize:'40px',color:'#fff',align:'center',stroke:'#C44569',strokeThickness:6,lineSpacing:6,shadow:{offsetX:3,offsetY:3,color:'#00000044',blur:10,fill:true}}).setOrigin(0.5).setDepth(10);
     this.tweens.add({targets:title,scaleX:1.05,scaleY:1.05,duration:1200,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
-    // Characters
-    const afra=this.add.image(W/2-55,225,'afra').setScale(0.16).setDepth(10);
-    const crush=this.add.image(W/2+55,225,'crush').setScale(0.14).setDepth(10);
-    this.tweens.add({targets:[afra,crush],y:215,duration:1500,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+    // Characters - iki Afra (abla kardeş!)
+    const afra=this.add.image(W/2-45,195,'afra').setScale(0.14).setDepth(10);
+    const afra2=this.add.image(W/2+45,195,'afra').setScale(0.14).setFlipX(true).setDepth(10);
+    this.tweens.add({targets:[afra,afra2],y:185,duration:1500,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
     // Hearts between
     this.time.addEvent({delay:600,loop:true,callback:()=>{
       const hg=this.add.graphics();hg.fillStyle(COLORS.red,0.9);hg.beginPath();hg.arc(-3,-2,3,Math.PI,0,false);hg.arc(3,-2,3,Math.PI,0,false);hg.lineTo(0,5);hg.closePath();hg.fillPath();
-      hg.setPosition(W/2+Phaser.Math.Between(-15,15),210);hg.setDepth(11);
-      this.tweens.add({targets:hg,y:170,alpha:0,scaleX:1.5,scaleY:1.5,duration:1500,onComplete:()=>hg.destroy()});
+      hg.setPosition(W/2+Phaser.Math.Between(-15,15),185);hg.setDepth(11);
+      this.tweens.add({targets:hg,y:145,alpha:0,scaleX:1.5,scaleY:1.5,duration:1500,onComplete:()=>hg.destroy()});
     }});
     // Message
-    this.add.text(W/2,320,'Sen bu dünyadaki\nen güzel hediyesin.\nNice mutlu yıllara...',{fontFamily:'Fredoka One, cursive',fontSize:'18px',color:'#fff',align:'center',lineSpacing:6,shadow:{offsetX:1,offsetY:1,color:'#00000033',blur:4,fill:true}}).setOrigin(0.5).setDepth(10);
+    this.add.text(W/2,280,'Sen bu dünyadaki\nen güzel hediyesin,\nNice mutlu yıllara!\n\nÖmer Faruk\'u boşver de\nkeşke biz bi kavuşabilseydik\nabla kardeş\n\nSeni çok seviyorum',{fontFamily:'Fredoka One, cursive',fontSize:'13px',color:'#fff',align:'center',lineSpacing:5,shadow:{offsetX:1,offsetY:1,color:'#00000033',blur:4,fill:true}}).setOrigin(0.5).setDepth(10);
     // Stats
     if(score>0||coins>0){
       const statsLine = 'Skor: '+score+(coins>0?'  |  Coin: '+coins:'');

@@ -152,9 +152,10 @@ class BootScene extends Phaser.Scene {
     this.textures.addBase64('afra', ASSET_AFRA);
     this.textures.addBase64('baby', ASSET_BABY);
     this.textures.addBase64('crush', ASSET_CRUSH);
+    this.textures.addBase64('sisters', ASSET_SISTERS);
   }
   create() {
-    const needed = ['afra','baby','crush'];
+    const needed = ['afra','baby','crush','sisters'];
     const allReady = () => needed.every(k => this.textures.exists(k));
     if (allReady()) { this.goToMenu(); return; }
     const check = this.time.addEvent({ delay: 100, loop: true, callback: () => {
@@ -1674,15 +1675,22 @@ class WinScene extends Phaser.Scene {
     // Title
     const title=this.add.text(W/2,50,"İyi ki doğdun\nafra!",{fontFamily:'Fredoka One, cursive',fontSize:'36px',color:'#fff',align:'center',stroke:'#C44569',strokeThickness:6,lineSpacing:4,shadow:{offsetX:3,offsetY:3,color:'#00000044',blur:10,fill:true}}).setOrigin(0.5).setDepth(10);
     this.tweens.add({targets:title,scaleX:1.05,scaleY:1.05,duration:1200,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
-    // Characters - iki Afra (abla kardeş!)
-    const afra=this.add.image(W/2-45,170,'afra').setScale(0.12).setDepth(10);
-    const afra2=this.add.image(W/2+45,170,'afra').setScale(0.12).setFlipX(true).setDepth(10);
-    this.tweens.add({targets:[afra,afra2],y:162,duration:1500,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
-    // Hearts between
-    this.time.addEvent({delay:600,loop:true,callback:()=>{
+    // Abla kardeş fotoğrafı
+    const sisImg = this.add.image(W/2, 175, 'sisters').setDepth(10);
+    // Fotoğrafı küçült ve yuvarlak çerçeve yap
+    const imgScale = Math.min(140 / sisImg.width, 100 / sisImg.height);
+    sisImg.setScale(imgScale);
+    // Pembe çerçeve
+    const frame = this.add.graphics(); frame.setDepth(9);
+    frame.lineStyle(4, COLORS.pink, 1);
+    frame.strokeRoundedRect(W/2-72, 125, 144, 100, 12);
+    // Hafif sallanma
+    this.tweens.add({targets:[sisImg,frame],y:'+=5',duration:1500,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+    // Hearts
+    this.time.addEvent({delay:700,loop:true,callback:()=>{
       const hg=this.add.graphics();hg.fillStyle(COLORS.red,0.9);hg.beginPath();hg.arc(-3,-2,3,Math.PI,0,false);hg.arc(3,-2,3,Math.PI,0,false);hg.lineTo(0,5);hg.closePath();hg.fillPath();
-      hg.setPosition(W/2+Phaser.Math.Between(-15,15),165);hg.setDepth(11);
-      this.tweens.add({targets:hg,y:130,alpha:0,scaleX:1.5,scaleY:1.5,duration:1500,onComplete:()=>hg.destroy()});
+      hg.setPosition(W/2+Phaser.Math.Between(-40,40),130);hg.setDepth(11);
+      this.tweens.add({targets:hg,y:100,alpha:0,scaleX:1.5,scaleY:1.5,duration:1500,onComplete:()=>hg.destroy()});
     }});
     // Message - birebir orijinal metin
     this.add.text(W/2,280,'Sen bu dünyadaki en güzel hediyesin,\nNice mutlu yıllara\n\nÖmer faruğu boşver de\nkeşke biz bi kavuşabilseydik\nabla kardeş\n\nSeni çok seviyorum',{fontFamily:'Fredoka One, cursive',fontSize:'13px',color:'#fff',align:'center',lineSpacing:5,shadow:{offsetX:1,offsetY:1,color:'#00000033',blur:4,fill:true}}).setOrigin(0.5).setDepth(10);
